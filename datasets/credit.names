@@ -1,4 +1,4 @@
-default,string,class
+class,string,class
 account_check_status,string,discrete
 duration_in_month,integer,continuous
 credit_history,string,discrete
