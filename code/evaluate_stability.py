@@ -52,7 +52,7 @@ def set_argparser():
     parser.add_argument('-s', dest='nbr_splits', help='Number of splits', default=10, type=int)
     parser.add_argument('-i', dest='nbr_iter', help='Number of iterations', default=5, type=int)
     parser.add_argument('-l', dest='load_model', help='Load model', default=False, action='store_true')
-    parser.add_argument('-g', dest='log', help='Show log', default=False, action='store_true')
+    parser.add_argument('-v', dest='verbose', help='Show log', default=False, action='store_true')
     parser.add_argument('-sd', dest='sd', help='Show available datasets', default=False, action='store_true')
     parser.add_argument('-sm', dest='sm', help='Show available models', default=False, action='store_true')
 
@@ -60,55 +60,55 @@ def set_argparser():
 
 
 def run_evaluate_stability(dataset_name, model_name, datasets_path='', models_path='', results_path='',
-                           nbr_splits=10, nbr_iter=5, load_model=False, log=False):
+                           nbr_splits=10, nbr_iter=5, load_model=False, verbose=False):
 
     # nbr_splits = 10
     # nbr_iter = 5
     # load_model = False
     # log = False
 
-    if log:
+    if verbose:
         print(datetime.datetime.now(), 'Loading %s dataset' % dataset_name)
     X, y, e, f = datamanager.get_dataset(dataset_name, datasets_path)
     features = f
     encoder = e
 
-    if log:
+    if verbose:
         print(datetime.datetime.now(), 'Building preprocessing pipe')
     preprocessing_pipe = prep.build_preprocessing_pipe()[0:5]
 
     if not load_model:
-        if log:
+        if verbose:
             nbr_models = nbr_splits * nbr_iter * len(preprocessing_pipe)
             print(datetime.datetime.now(), 'Training and testing %d models' % nbr_models)
         trained_model = stability.train_model(X, y, model_name, preprocessing_pipe, fit_predict_model, features,
-                                              nbr_splits, nbr_iter, log)
+                                              nbr_splits, nbr_iter, verbose)
 
-        if log:
+        if verbose:
             print(datetime.datetime.now(), 'Storing models')
         stability.store_model(trained_model, model_name, dataset_name, models_path)
     else:
-        if log:
+        if verbose:
             print(datetime.datetime.now(), 'Loading models')
         trained_model = stability.load_model(model_name, dataset_name, models_path)
 
-    if log:
+    if verbose:
         print(datetime.datetime.now(), 'Evaluating models stability')
     model_stability = stability.evaluate_model_stability(model_name, trained_model,
                                                          analyze_model, aggregation_functions, encoder)
 
-    if log:
+    if verbose:
         print(datetime.datetime.now(), 'Evaluating and comparing models stability')
     model_stability_comparison = stability.evaluate_model_stability_comparison(model_name, trained_model,
                                                                                compare_models, aggregation_functions,
                                                                                encoder)
 
-    if log:
+    if verbose:
         print(datetime.datetime.now(), 'Storing results')
     stability.store_model_stability(model_stability, model_stability_comparison, aggregation_functions,
                                     model_name, dataset_name, results_path)
 
-    if log:
+    if verbose:
         print(datetime.datetime.now(), 'Evaluation completed')
 
 
@@ -140,10 +140,10 @@ def main():
     nbr_splits = args.nbr_splits
     nbr_iter = args.nbr_iter
     load_model = args.load_model
-    log = args.log
+    verbose = args.verbose
 
     run_evaluate_stability(dataset_name, model_name, datasets_path, models_path, results_path,
-                           nbr_splits, nbr_iter, load_model, log)
+                           nbr_splits, nbr_iter, load_model, verbose)
 
     #print(models.brackets_repository.keys())
 

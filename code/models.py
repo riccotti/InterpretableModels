@@ -408,3 +408,13 @@ def compare_sklearn_linear_models(m1, m2, e, f1, f2, args):
     }
 
     return meval
+
+
+def fit_predict_yadt(train_test, seed):
+    clf = DecisionTreeClassifier(random_state=seed)
+    X_train, X_test, y_train, y_test, fsindexes = train_test
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred, average='weighted')
+    return clf, acc, f1, fsindexes

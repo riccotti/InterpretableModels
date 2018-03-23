@@ -45,10 +45,10 @@ def to_yadt(df, metadata, decision=None, targetname=None,
     elif decision is not None and isinstance(decision, pd.DataFrame):
         target = decision.columns[0]
     else: 
-        target = 'target'
-    if filenames==None:
+        target = 'class'
+    if filenames is None:
         filenames = filebase+'.names'
-    if filedata==None:
+    if filedata is None:
         filedata = filebase+('.data.gz' if comp else '.data')
     columns = [x[0] for x in metadata]
     if decision is None:
@@ -126,7 +126,7 @@ class YaDTClassifier(BaseEstimator, ClassifierMixin):
 
         if sample_weight is not None:
             w = self.name+'.weight'
-            meta.append( (w, 'double', 'weights') )
+            meta.append((w, 'double', 'weights'))
             if isinstance(X, pd.DataFrame):
                 ts[w] = sample_weight
             else:
@@ -134,13 +134,14 @@ class YaDTClassifier(BaseEstimator, ClassifierMixin):
                 ts = np.column_stack((ts, wcol))
         to_yadt(df=ts, metadata=meta, decision=y, filenames=namesfile, filedata=datafile, sep=self.sep)
 
-        cmd = 'dTcmd -fm {} -fd {} -sep {} -tb {} -t {} {}'.format(
+        cmd = "./dTcmd -fm {} -fd {} -sep '{}' -tb {} -d {} {}".format(
                 namesfile, datafile, self.sep, self.name+'.tree', self.name+'.dot', self.options)
         if verbose:
             print(cmd)
-        output = subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT)
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
         if verbose:
             print(output)
+        # print(self.name+'.dot')
         self.dt = nx.DiGraph(nx.drawing.nx_pydot.read_dot(self.name+'.dot'))
     #    dt_dot = pydotplus.graph_from_dot_data(open(name+'.dot', 'r').read())
 
@@ -152,9 +153,7 @@ class YaDTClassifier(BaseEstimator, ClassifierMixin):
             os.remove(self.name+'.dot')
         return self
 
-    def predict(self, X=None, datafile=None, deletefiles=True, proba=False, verbose=False):
-        if proba and (self.n_classes_ != 2):
-            raise Exception("YaDT scoring does not currently support more than 2 classes")
+    def predict(self, X=None, targetname='class', datafile=None, deletefiles=True, verbose=False):
         if X is None:
             if datafile is None:
                 raise Exception("YaDTClassifier: no data to predict")
@@ -165,32 +164,21 @@ class YaDTClassifier(BaseEstimator, ClassifierMixin):
             # remove weights column if present
             columns = [x[0] for x in self.metadata]
             df = X[columns] if isinstance(X, pd.DataFrame) else X
+            df[targetname] = 0
             to_yadt_data(df, datafile, sep=self.sep)
+
         scorefile = self.name + ".score"
-        cmd = 'dTcmd -bt {} -fs {} -sep {} -s {}'.format(
+        cmd = "./dTcmd -bt {} -ft {} -sep '{}' -s {}".format(
             self.name+'.tree', datafile, self.sep, scorefile)
         if verbose:
             print(cmd)
-        output = subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT)
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
         if verbose:
             print(output)
-        res = pd.read_csv(scorefile, sep=self.sep, header=None, usecols=(None if proba else (0,)))
+        res = pd.read_csv(scorefile, sep=self.sep, header=None, usecols=None)
         if deletefiles and os.path.exists(datafile):
             os.remove(datafile)
-        if os.path.exists(scorefile):
+        if deletefiles and os.path.exists(scorefile):
             os.remove(scorefile)
-        if not proba:
-            return res[0].values
-        r0 = res[0].values
-        r1 = res[1].values
-        base_class = self.classes_[0]
-        r = (r0 == base_class)*r1 + (r0 != base_class)*(1-r1)
-        r = r.astype(np.float64)
-        return np.column_stack((r, 1-r))
-    
-    def predict_proba(self, X=None, datafile=None, deletefiles=True, verbose=False):
-        return self.predict(X, datafile, deletefiles, proba=True, verbose=verbose)
-    
-    def decision_function(self, X=None, datafile=None, deletefiles=True, verbose=False):
-        proba = self.predict(X, datafile, deletefiles, proba=True, verbose=verbose)
-        return [ 1-2*x[0] for x in proba ]
+        return res[1].values
+
