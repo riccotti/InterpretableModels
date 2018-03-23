@@ -13,11 +13,12 @@ from sklearn import metrics
 from sklearn import datasets
 from sklearn.metrics import *
 
+
 def model_task(model):
     global X_train, y_train, X_test, y_test
     print('-- {} --'.format(type(model)))
     """ model fitting """
-    model.fit(X_train, y_train)
+    model.fit(X_train, y_train, verbose=True)
     print('Classes: {}'.format(model.classes_))
 
     """ model prediction """
@@ -59,8 +60,8 @@ yadt.to_yadt(predictive, metadata, decision=decision,
 X_train, X_test, y_train, y_test = train_test_split(
         predictive, decision, test_size=0.33, stratify=decision)
 
-model1 = DecisionTreeClassifier() #yadt.YaDTClassifier(X_train, options='-m 2 -npp')
-y_proba1 = model_task(model1)
+# model1 = DecisionTreeClassifier() #yadt.YaDTClassifier(X_train, options='-m 2 -npp')
+# y_proba1 = model_task(model1)
 
 model2 = yadt.YaDTClassifier(metadata, options='-m 2')
 y_proba2 = model_task(model2)

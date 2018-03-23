@@ -1,4 +1,5 @@
-import subprocess
+__author__ = "Riccardo Guidotti"
+
 import numpy as np
 
 from sklearn.tree import DecisionTreeClassifier
@@ -56,12 +57,12 @@ def jaccard(fset1, fset2):
 
 def fit_predict_sklearn_decision_tree(train_test, seed):
     clf = DecisionTreeClassifier(random_state=seed)
-    X_train, X_test, y_train, y_test = train_test
+    X_train, X_test, y_train, y_test, fsindexes = train_test
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
     acc = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred, average='weighted')
-    return clf, acc, f1
+    return clf, acc, f1, fsindexes
 
 
 def count_leaves(tree, n_nodes):
@@ -74,7 +75,7 @@ def count_leaves(tree, n_nodes):
         node_id, parent_depth = stack.pop()
 
         # If we have a test node
-        if (children_left[node_id] != children_right[node_id]):
+        if children_left[node_id] != children_right[node_id]:
             stack.append((children_left[node_id], parent_depth + 1))
             stack.append((children_right[node_id], parent_depth + 1))
         else:
@@ -144,14 +145,61 @@ def get_balancing(node_id, children_left, children_right, is_leaves):
         return hr - hl
 
 
-def analyze_sklearn_decision_tree(m):
-    fset = set([fid for fid, fimp in enumerate(m.feature_importances_) if fimp > 0.0])
+def get_features_set(mfi, e, f, cond):
 
+    if e is None:
+        fset = set([fid for fid, fimp in enumerate(mfi) if cond(fimp)])
+    else:
+        fset = set()
+        idx = 0
+        idx_m = 0
+        for i in range(0, len(e.feature_indices_) - 1):
+            fimp = 0
+            for j in range(e.feature_indices_[i], e.feature_indices_[i + 1]):
+                if f[j]:
+                    fimp += mfi[idx_m]
+                    idx_m += 1
+            if cond(fimp):
+                fset.add(idx)
+                idx += 1
+        for i in range(idx_m, len(mfi)):
+            fimp = mfi[i]
+            if cond(fimp):
+                fset.add(idx)
+                idx += 1
+
+    return fset
+
+
+def get_features_rank(mfi, e, f):
+
+    if e is None:
+        frank = mfi
+    else:
+        frank = list()
+        idx_m = 0
+        for i in range(0, len(e.feature_indices_) - 1):
+            fimp = 0
+            for j in range(e.feature_indices_[i], e.feature_indices_[i + 1]):
+                if f[j]:
+                    fimp += mfi[idx_m]
+                    idx_m += 1
+            frank.append(fimp)
+        for i in range(idx_m, len(mfi)):
+            fimp = mfi[i]
+            frank.append(fimp)
+
+    return frank
+
+
+def analyze_sklearn_decision_tree(m, e, f):
+    fset = get_features_set(m.feature_importances_, e, f, lambda x: x > 0.0)
     node_depth, is_leaves, children_left, children_right = get_tree_structure(m.tree_)
 
     meval = {
         'nbr_features': len(fset),
         'max_depth': m.tree_.max_depth,
+        'max_width': get_max_width(node_depth),
         'nbr_nodes': m.tree_.node_count,
         'nbr_leaves': count_leaves(m.tree_, m.tree_.node_count),
         'balancing': get_balancing(0, children_left, children_right, is_leaves),
@@ -171,26 +219,30 @@ def tree_edit_distance(t1, t2):
     return ted
 
 
-def compare_sklearn_decision_trees(m1, m2, args):
-    f1set = set([fid for fid, fimp in enumerate(m1.feature_importances_) if fimp > 0.0])
-    f2set = set([fid for fid, fimp in enumerate(m2.feature_importances_) if fimp > 0.0])
+def compare_sklearn_decision_trees(m1, m2, e, f1, f2, args):
+    # f1set = set([fid for fid, fimp in enumerate(m1.feature_importances_) if fimp > 0.0])
+    # f2set = set([fid for fid, fimp in enumerate(m2.feature_importances_) if fimp > 0.0])
+    # f1rank = m1.feature_importances_
+    # f2rank = m2.feature_importances_
 
-    f1rank = m1.feature_importances_
-    f2rank = m2.feature_importances_
+    f1set = get_features_set(m1.feature_importances_, e, f1, lambda x: x > 0.0)
+    f2set = get_features_set(m2.feature_importances_, e, f2, lambda x: x > 0.0)
+    f1rank = get_features_rank(m1.feature_importances_, e, f1)
+    f2rank = get_features_rank(m2.feature_importances_, e, f2)
 
     if len(f1rank) < len(f2rank):
         f1rank = np.concatenate((f1rank, [0.0] * (len(f2rank) - len(f1rank))))
     elif len(f2rank) < len(f1rank):
         f2rank = np.concatenate((f2rank, [0.0] * (len(f1rank) - len(f2rank))))
 
-    node_depth1, is_leaves1, cleft1, cright1 = get_tree_structure(m1.tree_)
-    node_depth2, is_leaves2, cleft2, cright2 = get_tree_structure(m2.tree_)
-
-    mid1, mid2, brackets_repository = args
-    tree_brackets1 = get_brackets(0, cleft1, cright1, is_leaves1, mid1, brackets_repository)
-    tree_brackets2 = get_brackets(0, cleft2, cright2, is_leaves2, mid2, brackets_repository)
-
-    ted = tree_edit_distance(tree_brackets1, tree_brackets2)
+    # node_depth1, is_leaves1, cleft1, cright1 = get_tree_structure(m1.tree_)
+    # node_depth2, is_leaves2, cleft2, cright2 = get_tree_structure(m2.tree_)
+    #
+    # mid1, mid2, brackets_repository = args
+    # tree_brackets1 = get_brackets(0, cleft1, cright1, is_leaves1, mid1, brackets_repository)
+    # tree_brackets2 = get_brackets(0, cleft2, cright2, is_leaves2, mid2, brackets_repository)
+    #
+    # ted = tree_edit_distance(tree_brackets1, tree_brackets2)
 
     meval = {
         'intersection': intersection(f1set, f2set),
@@ -198,7 +250,7 @@ def compare_sklearn_decision_trees(m1, m2, args):
         'sample_pearson': sample_pearson(f1set, f2set),
         'kendalltau': rank_kendalltau(f1rank, f2rank),
         'spearmanr': rank_spearmanr(f1rank, f2rank),
-        'tree_edit_distance': ted,
+        # 'tree_edit_distance': ted,
     }
 
     return meval
@@ -206,38 +258,38 @@ def compare_sklearn_decision_trees(m1, m2, args):
 
 def fit_predict_linear_regression(train_test, seed):
     clf = LinearRegression()
-    X_train, X_test, y_train, y_test = train_test
+    X_train, X_test, y_train, y_test, fsindexes = train_test
     clf.fit(X_train, y_train)
     y_pred = np.round(clf.predict(X_test)).astype(int)
     acc = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred, average='weighted')
-    return clf, acc, f1
+    return clf, acc, f1, fsindexes
 
 
 def fit_predict_lasso(train_test, seed):
     clf = Lasso(random_state=seed)
-    X_train, X_test, y_train, y_test = train_test
+    X_train, X_test, y_train, y_test, fsindexes = train_test
     clf.fit(X_train, y_train)
     y_pred = np.round(clf.predict(X_test)).astype(int)
     acc = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred, average='weighted')
-    return clf, acc, f1
+    return clf, acc, f1, fsindexes
 
 
 def fit_predict_ridge(train_test, seed):
     clf = Ridge(random_state=seed)
-    X_train, X_test, y_train, y_test = train_test
+    X_train, X_test, y_train, y_test, fsindexes = train_test
     clf.fit(X_train, y_train)
     y_pred = np.round(clf.predict(X_test)).astype(int)
     acc = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred, average='weighted')
-    return clf, acc, f1
+    return clf, acc, f1, fsindexes
 
 
-def analyze_sklearn_linear_models(m):
-    fset = set([fid for fid, fimp in enumerate(m.coef_) if fimp != 0.0])
-    fpset = set([fid for fid, fimp in enumerate(m.coef_) if fimp > 0.0])
-    fnset = set([fid for fid, fimp in enumerate(m.coef_) if fimp < 0.0])
+def analyze_sklearn_linear_models(m, e, f):
+    fset = get_features_set(m.coef, e, f, lambda x: x != 0.0)
+    fpset = get_features_set(m.coef, e, f, lambda x: x > 0.0)
+    fnset = get_features_set(m.coef, e, f, lambda x: x < 0.0)
 
     meval = {
         'nbr_features': len(fset),
@@ -306,17 +358,22 @@ def imcosine(x, y):
     return cosine(x, y)
 
 
-def compare_sklearn_linear_models(m1, m2, args):
-    f1set = set([fid for fid, fimp in enumerate(m1.coef_) if fimp != 0.0])
-    f2set = set([fid for fid, fimp in enumerate(m2.coef_) if fimp != 0.0])
+def compare_sklearn_linear_models(m1, m2, e, f1, f2, args):
+    # f1set = set([fid for fid, fimp in enumerate(m1.coef_) if fimp != 0.0])
+    # f2set = set([fid for fid, fimp in enumerate(m2.coef_) if fimp != 0.0])
+    # f1rank = m1.coef_
+    # f2rank = m2.coef_
+
+    f1set = get_features_set(m1.coef, e, f1, lambda x: x != 0.0)
+    f2set = get_features_set(m2.coef, e, f2, lambda x: x != 0.0)
 
     if len(f1set) == 0:
         f1set = set([fid for fid, fimp in enumerate(m1.coef_)])
     if len(f2set) == 0:
         f2set = set([fid for fid, fimp in enumerate(m2.coef_)])
 
-    f1rank = m1.coef_
-    f2rank = m2.coef_
+    f1rank = get_features_rank(m1.coef_, e, f1)
+    f2rank = get_features_rank(m2.coef_, e, f2)
 
     if len(f1rank) < len(f2rank):
         f1rank = np.concatenate((f1rank, [0.0] * (len(f2rank) - len(f1rank))))

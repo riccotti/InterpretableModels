@@ -1,3 +1,7 @@
+__author__ = "Riccardo Guidotti"
+
+import datetime
+import numpy as np
 import _pickle as cPickle
 
 import preprocessing as prep
@@ -12,17 +16,24 @@ def copy_train_test(train_test):
     return X_train, X_test, y_train, y_test
 
 
-def train_model(X, y, model_name, preprocessing_pipe, fit_predict_model, nbr_splits=10, nbr_iter=5):
+def train_model(X, y, model_name, preprocessing_pipe, fit_predict_model, features, nbr_splits=10, nbr_iter=5,
+                verbose=False):
     trained_model = defaultdict(lambda: defaultdict(list))
     for iter_id in range(0, nbr_iter):
+        if verbose:
+            print(datetime.datetime.now(), '\tIteration % d' % iter_id)
         skf = StratifiedKFold(n_splits=nbr_splits, random_state=iter_id, shuffle=True)
         for k, indexes in enumerate(skf.split(X, y)):
+            if verbose:
+                print(datetime.datetime.now(), '\t\tFold % d' % k)
             train_index, test_index = indexes
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
             train_test = (X_train, X_test, y_train, y_test)
             for pipe in preprocessing_pipe:
-                train_test_eval = prep.preprocessing(copy_train_test(train_test), pipe, iter_id)
+                if verbose:
+                    print(datetime.datetime.now(), '\t\t\tPreprocessing % s' % str(pipe))
+                train_test_eval = prep.preprocessing(copy_train_test(train_test), pipe, iter_id, features)
                 maf = fit_predict_model[model_name](train_test_eval, iter_id)
                 fold_id = len(trained_model[pipe])
                 trained_model[pipe][(iter_id, k, fold_id)] = maf
@@ -35,15 +46,15 @@ def store_model(trained_model, model_name, dataset_name, path):
     filename = '%s_%s_%s' % (dataset_name, mtype, mname)
     text_file = open(path + filename + '.csv', 'w')
     model_file = open(path + filename + '.pckl', 'wb')
-    text_file.write('dataset;model_name;preprocessing;iter_id;k;fold_id;acc_score;f1_score\n')
+    text_file.write('dataset;model_name;preprocessing;iter_id;k;fold_id;acc_score;f1_score,features\n')
 
     for pipe in trained_model:
         for fid in trained_model[pipe]:
             iter_id, k, fold_id = fid
-            model, acc, f1 = trained_model[pipe][fid]
+            model, acc, f1, fs = trained_model[pipe][fid]
             cPickle.dump(model, model_file)
-            text_file.write('%s;%s;%s;%s;%s;%s;%s;%s\n' % (
-                dataset_name, model_name, pipe, iter_id, k, fold_id, acc, f1))
+            text_file.write('%s;%s;%s;%s;%s;%s;%s;%s;%s\n' % (
+                dataset_name, model_name, pipe, iter_id, k, fold_id, acc, f1, ' '.join(str(x) for x in fs.tolist())))
         text_file.flush()
     model_file.close()
     text_file.close()
@@ -74,6 +85,7 @@ def load_model(model_name, dataset_name, path):
         fold_id = int(fields[5])
         acc = float(fields[6])
         f1 = float(fields[7])
+        fs = np.array([bool(x) for x in fields[8].split(' ')])
         trained_model[pipe][(iter_id, k, fold_id)] = (models[fold_id], acc, f1)
 
     text_file.close()
@@ -86,13 +98,13 @@ def defaultdict2dict(d):
     return d
 
 
-def evaluate_model_stability(model_name, trained_model, analyze_model, aggregation_functions):
+def evaluate_model_stability(model_name, trained_model, analyze_model, aggregation_functions, encoder):
     prep_measure_agg_value = defaultdict(lambda: defaultdict(dict))
     for pipe in trained_model:
         measure_values = defaultdict(list)
         for fid in trained_model[pipe]:
-            model, acc, f1 = trained_model[pipe][fid]
-            meval = analyze_model[model_name](model)
+            model, acc, f1, fs = trained_model[pipe][fid]
+            meval = analyze_model[model_name](model, encoder, fs)
 
             for measure in meval:
                 measure_values[measure].append(meval[measure])
@@ -106,8 +118,27 @@ def evaluate_model_stability(model_name, trained_model, analyze_model, aggregati
 
     return defaultdict2dict(prep_measure_agg_value)
 
+    # prep_measure_agg_value = defaultdict(lambda: defaultdict(dict))
+    # for pipe in trained_model:
+    #     measure_values = defaultdict(list)
+    #     for fid in trained_model[pipe]:
+    #         model, acc, f1 = trained_model[pipe][fid]
+    #         meval = analyze_model[model_name](model)
+    #
+    #         for measure in meval:
+    #             measure_values[measure].append(meval[measure])
+    #         measure_values['accuracy'].append(acc)
+    #         measure_values['f1score'].append(f1)
+    #
+    #     for measure, values in measure_values.items():
+    #         for af_name in sorted(aggregation_functions):
+    #             fun = aggregation_functions[af_name]
+    #             prep_measure_agg_value[pipe][measure][af_name] = fun(values)
+    #
+    # return defaultdict2dict(prep_measure_agg_value)
 
-def evaluate_model_stability_comparison(model_name, trained_model, compare_models, aggregation_functions):
+
+def evaluate_model_stability_comparison(model_name, trained_model, compare_models, aggregation_functions, encoder):
     prep_measure_agg_value = defaultdict(lambda: defaultdict(dict))
     for pipe in trained_model:
         measure_values = defaultdict(list)
@@ -115,10 +146,10 @@ def evaluate_model_stability_comparison(model_name, trained_model, compare_model
         brackets_repository = dict()
         for i in range(0, len(tm_list)):
             for j in range(i + 1, len(tm_list)):
-                m1, _, _ = trained_model[pipe][tm_list[i]]
-                m2, _, _ = trained_model[pipe][tm_list[j]]
+                m1, _, _, fs1 = trained_model[pipe][tm_list[i]]
+                m2, _, _, fs2 = trained_model[pipe][tm_list[j]]
                 args = (i, j, brackets_repository)
-                meval = compare_models[model_name](m1, m2, args)
+                meval = compare_models[model_name](m1, m2, encoder, fs1, fs2, args)
 
                 for measure in meval:
                     measure_values[measure].append(meval[measure])
@@ -157,3 +188,4 @@ def store_model_stability(model_stability, model_stability_comparison, aggregati
         res_val = '%s;%s;%s;%s\n' % (dataset_name, model_name, pipe, sval)
         res_file.write(res_val)
     res_file.close()
+

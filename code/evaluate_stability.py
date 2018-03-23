@@ -1,3 +1,5 @@
+__author__ = "Riccardo Guidotti"
+
 import datetime
 import argparse
 
@@ -67,36 +69,39 @@ def run_evaluate_stability(dataset_name, model_name, datasets_path='', models_pa
 
     if log:
         print(datetime.datetime.now(), 'Loading %s dataset' % dataset_name)
-    X, y = datamanager.get_dataset(dataset_name, datasets_path)
+    X, y, e, f = datamanager.get_dataset(dataset_name, datasets_path)
+    features = f
+    encoder = e
 
     if log:
         print(datetime.datetime.now(), 'Building preprocessing pipe')
-    preprocessing_pipe = prep.build_preprocessing_pipe()[:5]
+    preprocessing_pipe = prep.build_preprocessing_pipe()[-5:]
 
     if not load_model:
         if log:
             nbr_models = nbr_splits * nbr_iter * len(preprocessing_pipe)
             print(datetime.datetime.now(), 'Training and testing %d models' % nbr_models)
-        trained_model = stability.train_model(X, y, model_name, preprocessing_pipe, fit_predict_model,
-                                              nbr_splits, nbr_iter)
+        trained_model = stability.train_model(X, y, model_name, preprocessing_pipe, fit_predict_model, features,
+                                              nbr_splits, nbr_iter, log)
 
         if log:
             print(datetime.datetime.now(), 'Storing models')
         stability.store_model(trained_model, model_name, dataset_name, models_path)
     else:
         if log:
-            print(datetime.datetime.now(), 'loading models')
+            print(datetime.datetime.now(), 'Loading models')
         trained_model = stability.load_model(model_name, dataset_name, models_path)
 
     if log:
         print(datetime.datetime.now(), 'Evaluating models stability')
     model_stability = stability.evaluate_model_stability(model_name, trained_model,
-                                                         analyze_model, aggregation_functions)
+                                                         analyze_model, aggregation_functions, encoder)
 
     if log:
         print(datetime.datetime.now(), 'Evaluating and comparing models stability')
     model_stability_comparison = stability.evaluate_model_stability_comparison(model_name, trained_model,
-                                                                               compare_models, aggregation_functions)
+                                                                               compare_models, aggregation_functions,
+                                                                               encoder)
 
     if log:
         print(datetime.datetime.now(), 'Storing results')
