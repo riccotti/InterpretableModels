@@ -54,7 +54,7 @@ def store_model(trained_model, model_name, dataset_name, path):
             model, acc, f1, fs = trained_model[pipe][fid]
             cPickle.dump(model, model_file)
             text_file.write('%s;%s;%s;%s;%s;%s;%s;%s;%s\n' % (
-                dataset_name, model_name, pipe, iter_id, k, fold_id, acc, f1, ' '.join(str(x) for x in fs.tolist())))
+                dataset_name, model_name, pipe, iter_id, k, fold_id, acc, f1, ' '.join(str(x) for x in fs)))
         text_file.flush()
     model_file.close()
     text_file.close()
@@ -85,8 +85,8 @@ def load_model(model_name, dataset_name, path):
         fold_id = int(fields[5])
         acc = float(fields[6])
         f1 = float(fields[7])
-        fs = np.array([bool(x) for x in fields[8].split(' ')])
-        trained_model[pipe][(iter_id, k, fold_id)] = (models[fold_id], acc, f1)
+        fs = [bool(x) for x in fields[8].split(' ')]
+        trained_model[pipe][(iter_id, k, fold_id)] = (models[fold_id], acc, f1, fs)
 
     text_file.close()
     return trained_model

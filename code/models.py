@@ -287,9 +287,9 @@ def fit_predict_ridge(train_test, seed):
 
 
 def analyze_sklearn_linear_models(m, e, f):
-    fset = get_features_set(m.coef, e, f, lambda x: x != 0.0)
-    fpset = get_features_set(m.coef, e, f, lambda x: x > 0.0)
-    fnset = get_features_set(m.coef, e, f, lambda x: x < 0.0)
+    fset = get_features_set(m.coef_, e, f, lambda x: x != 0.0)
+    fpset = get_features_set(m.coef_, e, f, lambda x: x > 0.0)
+    fnset = get_features_set(m.coef_, e, f, lambda x: x < 0.0)
 
     meval = {
         'nbr_features': len(fset),
@@ -358,14 +358,26 @@ def imcosine(x, y):
     return cosine(x, y)
 
 
+def get_weights(m, f):
+    idx = 0
+    mc = list()
+    for i in range(0, len(f)):
+        if f[i]:
+            mc.append(m[idx])
+            idx += 1
+        else:
+            mc.append(0)
+    return np.array(mc)
+
+
 def compare_sklearn_linear_models(m1, m2, e, f1, f2, args):
     # f1set = set([fid for fid, fimp in enumerate(m1.coef_) if fimp != 0.0])
     # f2set = set([fid for fid, fimp in enumerate(m2.coef_) if fimp != 0.0])
     # f1rank = m1.coef_
     # f2rank = m2.coef_
 
-    f1set = get_features_set(m1.coef, e, f1, lambda x: x != 0.0)
-    f2set = get_features_set(m2.coef, e, f2, lambda x: x != 0.0)
+    f1set = get_features_set(m1.coef_, e, f1, lambda x: x != 0.0)
+    f2set = get_features_set(m2.coef_, e, f2, lambda x: x != 0.0)
 
     if len(f1set) == 0:
         f1set = set([fid for fid, fimp in enumerate(m1.coef_)])
@@ -380,16 +392,19 @@ def compare_sklearn_linear_models(m1, m2, e, f1, f2, args):
     elif len(f2rank) < len(f1rank):
         f2rank = np.concatenate((f2rank, [0.0] * (len(f1rank) - len(f2rank))))
 
+    mc1 = get_weights(m1.coef_, f1)
+    mc2 = get_weights(m2.coef_, f2)
+
     meval = {
         'intersection': intersection(f1set, f2set),
         'jaccard': jaccard(f1set, f2set),
         'sample_pearson': sample_pearson(f1set, f2set),
         'kendalltau': rank_kendalltau(f1rank, f2rank),
         'spearmanr': rank_spearmanr(f1rank, f2rank),
-        'euclidean': euclidean(m1.coef_, m2.coef_),
-        'neuclidean': normalized_euclidean_distance(m1.coef_, m2.coef_),
-        'cosine': imcosine(m1.coef_, m2.coef_),
-        'cityblock': cityblock(m1.coef_, m2.coef_),
+        'euclidean': euclidean(mc1, mc2),
+        'neuclidean': normalized_euclidean_distance(mc1, mc2),
+        'cosine': imcosine(mc1, mc2),
+        'cityblock': cityblock(mc1, mc2),
     }
 
     return meval

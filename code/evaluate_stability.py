@@ -75,7 +75,7 @@ def run_evaluate_stability(dataset_name, model_name, datasets_path='', models_pa
 
     if log:
         print(datetime.datetime.now(), 'Building preprocessing pipe')
-    preprocessing_pipe = prep.build_preprocessing_pipe()[-5:]
+    preprocessing_pipe = prep.build_preprocessing_pipe()[0:5]
 
     if not load_model:
         if log:
