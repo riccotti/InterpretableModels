@@ -59,10 +59,17 @@ def prepare_sklearn_dataset(dataset_name, dataset_path, target='class'):
     if len(features2binarize) > 1:
         e = OneHotEncoder(categorical_features=features2binarize)
         X = e.fit_transform(X).toarray()
+        f = sklearn_metadata(features, e.feature_indices_, features2binarize, X.shape[1], target)
     else:
         e = None
+        f = features
 
-    f = sklearn_metadata(features, e.feature_indices_, features2binarize, X.shape[1], target)
+    # print(e,'<<<<<<')
+    # if e is None:
+    #     print('ioooooo')
+    #
+    # else:
+    #     f = features
 
     return X, y, e, f
 
