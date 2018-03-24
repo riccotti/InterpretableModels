@@ -194,15 +194,24 @@ def get_features_rank(mfi, e, f):
 
 def analyze_sklearn_decision_tree(m, e, f):
     fset = get_features_set(m.feature_importances_, e, f, lambda x: x > 0.0)
+
+    nbr_features = len(fset)
     node_depth, is_leaves, children_left, children_right = get_tree_structure(m.tree_)
+    max_depth = m.tree_.max_depth
+    max_width = get_max_width(node_depth)
+    nbr_nodes = m.tree_.node_count
+    nbr_leaves = count_leaves(m.tree_, m.tree_.node_count)
+    nbr_splits = m.tree_.node_count - nbr_leaves
+    balancing = get_balancing(0, children_left, children_right, is_leaves)
 
     meval = {
-        'nbr_features': len(fset),
-        'max_depth': m.tree_.max_depth,
-        'max_width': get_max_width(node_depth),
-        'nbr_nodes': m.tree_.node_count,
-        'nbr_leaves': count_leaves(m.tree_, m.tree_.node_count),
-        'balancing': get_balancing(0, children_left, children_right, is_leaves),
+        'nbr_features': nbr_features,
+        'max_depth': max_depth,
+        'max_width': max_width,
+        'nbr_nodes': nbr_nodes,
+        'nbr_leaves': nbr_leaves,
+        'nbr_splits': nbr_splits,
+        'balancing': balancing,
     }
 
     return meval
