@@ -52,4 +52,4 @@ Soil_Type37,integer,discrete
 Soil_Type38,integer,discrete
 Soil_Type39,integer,discrete
 Soil_Type40,integer,discrete
-Class,integer,class
+class,integer,class
