@@ -41,6 +41,10 @@ def encode_dataset(train_test, features):
         X_train0 = X_col_train if X_train0 is None else np.column_stack((X_train0, X_col_train))
         X_test0 = X_col_test if X_test0 is None else np.column_stack((X_test0, X_col_test))
 
+    le = LabelEncoder()
+    y_train = le.fit_transform(y_train)
+    y_test = le.transform(y_test)
+
     return (X_train0, X_test0, y_train, y_test), label_encoders
 
 
@@ -72,23 +76,34 @@ def decode_dataset(train_test, label_encoders, features, fs):
 
 
 def train_model(X, y, model_name, preprocessing_pipe, fit_predict_model, features, nbr_splits=10, nbr_iter=5,
-                verbose=False):
+                verbose=False, logging=None):
     trained_model = defaultdict(lambda: defaultdict(list))
     for iter_id in range(0, nbr_iter):
+
         if verbose:
             print(datetime.datetime.now(), '\tIteration % d' % iter_id)
+
+        logging.info('%s\tIteration % d' % (datetime.datetime.now(), iter_id))
+
         skf = StratifiedKFold(n_splits=nbr_splits, random_state=iter_id, shuffle=True)
         for k, indexes in enumerate(skf.split(X, y)):
+
             if verbose:
                 print(datetime.datetime.now(), '\t\tFold % d' % k)
+
+            logging.info('%s\t\tFold % d' % (datetime.datetime.now(), k))
+
             train_index, test_index = indexes
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
             train_test = (X_train, X_test, y_train, y_test)
             for pipe in preprocessing_pipe:
+
                 if verbose:
-                    print(datetime.datetime.now(), '\t\t\tPreprocessing % s' % str(pipe))
-                # try:
+                    print(datetime.datetime.now(), '\t\t\tPreprocessing %s' % str(pipe))
+
+                logging.info('%s\t\t\tPreprocessing %s' % (datetime.datetime.now(), str(pipe)))
+
                 ctt = copy_train_test(train_test)
                 if model_name in [('DT', 'yadt')]:
                     ctt, les = encode_dataset(ctt, features)
@@ -97,13 +112,15 @@ def train_model(X, y, model_name, preprocessing_pipe, fit_predict_model, feature
                 else:
                     ctt, fs = prep.preprocessing(ctt, pipe, iter_id, features)
                 train_test_eval = ctt[0], ctt[1], ctt[2], ctt[3], fs
-                print(datetime.datetime.now(), '\t\t\tFit Predict % s' % str(model_name))
+
+                if verbose:
+                    print(datetime.datetime.now(), '\t\t\tFit Predict % s' % str(model_name))
+
+                logging.info('%s\t\t\tFit Predict % s' % (datetime.datetime.now(), str(model_name)))
+
                 maf = fit_predict_model[model_name](train_test_eval, iter_id, features)
                 fold_id = len(trained_model[pipe])
                 trained_model[pipe][(iter_id, k, fold_id)] = maf
-                # except Exception:
-                #     print(datetime.datetime.now(), '\t\t\tError in Preprocessing or Fit Predict')
-                #     continue
 
     return trained_model
 

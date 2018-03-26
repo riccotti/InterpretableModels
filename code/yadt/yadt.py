@@ -13,8 +13,6 @@ import warnings
 warnings.filterwarnings("ignore")
 warnings.simplefilter("ignore")
 
-#import pydotplus
-
 
 def metadata(df, ovr_types={}):
     res = []
@@ -186,5 +184,7 @@ class YaDTClassifier(BaseEstimator, ClassifierMixin):
             os.remove(datafile)
         if deletefiles and os.path.exists(scorefile):
             os.remove(scorefile)
+        if os.path.exists(self.name+'.tree'):
+            os.remove(self.name+'.tree')
         return res[1].values
 

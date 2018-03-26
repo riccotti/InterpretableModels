@@ -73,11 +73,11 @@ def fit_predict_yadt_decision_tree(train_test, seed, features):
     X_train, X_test, y_train, y_test, fsindexes = train_test
     metadata = [f for fs, f in zip(fsindexes, features) if fs]
     clf = yadt.YaDTClassifier(metadata, options='-m 2')
-    clf.fit(X_train, y_train, verbose=False)
-    y_pred = clf.predict(X_test, verbose=False)
+    clf.fit(X_train, y_train, verbose=False, deletefiles=True)
+    y_pred = clf.predict(X_test, verbose=False, deletefiles=True)
     acc = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred, average='weighted')
-    yadt.clean()
+    # yadt.clean()
     return clf, acc, f1, fsindexes
 
 

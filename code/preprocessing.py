@@ -33,10 +33,10 @@ instance_selection = {
     'RandomOverSampler': RandomOverSampler,
     'SMOTE': SMOTE,
     'RandomUnderSampler': RandomUnderSampler,
-    'CondensedNearestNeighbour': CondensedNearestNeighbour,
 
-    # 'ADASYN': ADASYN,
     # 'ClusterCentroids': ClusterCentroids,
+    # 'CondensedNearestNeighbour': CondensedNearestNeighbour,
+    # 'ADASYN': ADASYN,
     # 'SMOTEENN': SMOTEENN,
 }
 
