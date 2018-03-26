@@ -16,6 +16,7 @@ warnings.filterwarnings("ignore")
 
 fit_predict_model = {
     ('DT', 'sklearn'): models.fit_predict_sklearn_decision_tree,
+    ('DT', 'yadt'): models.fit_predict_yadt_decision_tree,
     ('LM', 'linear_regression'): models.fit_predict_linear_regression,
     ('LM', 'lasso'): models.fit_predict_lasso,
     ('LM', 'ridge'): models.fit_predict_ridge,
@@ -144,8 +145,6 @@ def main():
 
     run_evaluate_stability(dataset_name, model_name, datasets_path, models_path, results_path,
                            nbr_splits, nbr_iter, load_model, verbose)
-
-    #print(models.brackets_repository.keys())
 
 
 if __name__ == "__main__":

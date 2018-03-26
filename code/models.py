@@ -1,6 +1,7 @@
 __author__ = "Riccardo Guidotti"
 
 import numpy as np
+import networkx as nx
 
 from sklearn.tree import DecisionTreeClassifier
 
@@ -18,7 +19,11 @@ from scipy.spatial.distance import cityblock
 from scipy.spatial.distance import euclidean
 from scipy.spatial.distance import cosine
 
+from yadt import yadt
 from apted import apted, helpers
+
+import warnings
+warnings.filterwarnings("ignore")
 
 
 linear_models = {
@@ -32,8 +37,8 @@ decision_trees = {
 }
 
 
-def sample_pearson(s1, s2):
-    nf = len(s1 | s2)  # the total number of features
+def sample_pearson(s1, s2, nf):
+    # nf = len(s1 | s2)  # the total number of features
     ki = len(s1)  # number of features in s1
     kj = len(s2)  # number of features in s2
     den = np.sqrt(ki * (nf - ki)) * np.sqrt(kj * (nf - kj))
@@ -51,17 +56,28 @@ def intersection(fset1, fset2):
 
 
 def jaccard(fset1, fset2):
-
     return len(fset1 & fset2) / len(fset1 | fset2)
 
 
-def fit_predict_sklearn_decision_tree(train_test, seed):
+def fit_predict_sklearn_decision_tree(train_test, seed, features):
     clf = DecisionTreeClassifier(random_state=seed)
     X_train, X_test, y_train, y_test, fsindexes = train_test
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
     acc = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred, average='weighted')
+    return clf, acc, f1, fsindexes
+
+
+def fit_predict_yadt_decision_tree(train_test, seed, features):
+    X_train, X_test, y_train, y_test, fsindexes = train_test
+    metadata = [f for fs, f in zip(fsindexes, features) if fs]
+    clf = yadt.YaDTClassifier(metadata, options='-m 2')
+    clf.fit(X_train, y_train, verbose=False)
+    y_pred = clf.predict(X_test, verbose=False)
+    acc = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred, average='weighted')
+    yadt.clean()
     return clf, acc, f1, fsindexes
 
 
@@ -217,6 +233,50 @@ def analyze_sklearn_decision_tree(m, e, f):
     return meval
 
 
+def get_node_labels(dt):
+    return {k: v.replace('"', '').replace('\\n', '') for k, v in nx.get_node_attributes(dt, 'label').items()}
+
+
+def get_edge_labels(dt):
+    return {k: v.replace('"', '').replace('\\n', '') for k, v in nx.get_edge_attributes(dt, 'label').items()}
+
+
+def analyze_yadt_decision_tree(m, e, f):
+    dt = m.dt
+    # edge_labels = get_edge_labels(dt)
+    node_labels = get_node_labels(dt)
+    node_isleaf = {k: v == 'ellipse' for k, v in nx.get_node_attributes(dt, 'shape').items()}
+
+    fset = set([v for k, v in node_labels.items() if not node_isleaf[k]])
+    nbr_features = len(fset)
+    nbr_nodes = dt.number_of_nodes()
+    nbr_leaves = np.sum([1 for v in node_isleaf.values() if v])
+    nbr_splits = nbr_nodes - nbr_leaves
+
+    node_depth = dict()
+    stack = [('n0', -1)]  # seed is the root node id and its parent depth
+    while len(stack) > 0:
+        node_id, parent_depth = stack.pop()
+        node_depth[node_id] = parent_depth + 1
+        for k in dt[node_id]:
+            stack.append((k, parent_depth + 1))
+
+    max_depth = np.max(list(node_depth.values()))
+    max_width = np.max(np.unique(list(node_depth.values()), return_counts=True)[1])
+
+    meval = {
+        'nbr_features': nbr_features,
+        'max_depth': max_depth,
+        'max_width': max_width,
+        'nbr_nodes': nbr_nodes,
+        'nbr_leaves': nbr_leaves,
+        'nbr_splits': nbr_splits,
+        # 'balancing': balancing, yadt is not binary thus is not available
+    }
+
+    return meval
+
+
 # def java_edit_distance(tb1, tb2):
 #     cmd = 'java -jar apted.jar -t %s %s' % (tb1, tb2)
 #     ed = float(subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT))
@@ -238,6 +298,7 @@ def compare_sklearn_decision_trees(m1, m2, e, f1, f2, args):
     f2set = get_features_set(m2.feature_importances_, e, f2, lambda x: x > 0.0)
     f1rank = get_features_rank(m1.feature_importances_, e, f1)
     f2rank = get_features_rank(m2.feature_importances_, e, f2)
+    nf = len([f for f in f1 if f])
 
     if len(f1rank) < len(f2rank):
         f1rank = np.concatenate((f1rank, [0.0] * (len(f2rank) - len(f1rank))))
@@ -256,7 +317,7 @@ def compare_sklearn_decision_trees(m1, m2, e, f1, f2, args):
     meval = {
         'intersection': intersection(f1set, f2set),
         'jaccard': jaccard(f1set, f2set),
-        'sample_pearson': sample_pearson(f1set, f2set),
+        'sample_pearson': sample_pearson(f1set, f2set, nf),
         'kendalltau': rank_kendalltau(f1rank, f2rank),
         'spearmanr': rank_spearmanr(f1rank, f2rank),
         # 'tree_edit_distance': ted,
@@ -265,7 +326,31 @@ def compare_sklearn_decision_trees(m1, m2, e, f1, f2, args):
     return meval
 
 
-def fit_predict_linear_regression(train_test, seed):
+def compare_yadt_decision_trees(m1, m2, e, f1, f2, args):
+    dt1 = m1.dt
+    node_labels1 = get_node_labels(dt1)
+    node_isleaf1 = {k: v == 'ellipse' for k, v in nx.get_node_attributes(dt1, 'shape').items()}
+    f1set = set([v for k, v in node_labels1.items() if not node_isleaf1[k]])
+
+    dt2 = m2.dt
+    node_labels2 = get_node_labels(dt2)
+    node_isleaf2 = {k: v == 'ellipse' for k, v in nx.get_node_attributes(dt2, 'shape').items()}
+    f2set = set([v for k, v in node_labels2.items() if not node_isleaf2[k]])
+
+    nf = len([f for f in f1 if f])
+
+    meval = {
+        'intersection': intersection(f1set, f2set),
+        'jaccard': jaccard(f1set, f2set),
+        'sample_pearson': sample_pearson(f1set, f2set, nf),
+        # 'kendalltau': rank_kendalltau(f1rank, f2rank), # feature importance rank not available for yadt
+        # 'spearmanr': rank_spearmanr(f1rank, f2rank),
+    }
+
+    return meval
+
+
+def fit_predict_linear_regression(train_test, seed, features):
     clf = LinearRegression()
     X_train, X_test, y_train, y_test, fsindexes = train_test
     clf.fit(X_train, y_train)
@@ -275,7 +360,7 @@ def fit_predict_linear_regression(train_test, seed):
     return clf, acc, f1, fsindexes
 
 
-def fit_predict_lasso(train_test, seed):
+def fit_predict_lasso(train_test, seed, features):
     clf = Lasso(random_state=seed)
     X_train, X_test, y_train, y_test, fsindexes = train_test
     clf.fit(X_train, y_train)
@@ -285,7 +370,7 @@ def fit_predict_lasso(train_test, seed):
     return clf, acc, f1, fsindexes
 
 
-def fit_predict_ridge(train_test, seed):
+def fit_predict_ridge(train_test, seed, features):
     clf = Ridge(random_state=seed)
     X_train, X_test, y_train, y_test, fsindexes = train_test
     clf.fit(X_train, y_train)
@@ -404,10 +489,12 @@ def compare_sklearn_linear_models(m1, m2, e, f1, f2, args):
     mc1 = get_weights(m1.coef_, f1)
     mc2 = get_weights(m2.coef_, f2)
 
+    nf = len([f for f in f1 if f])
+
     meval = {
         'intersection': intersection(f1set, f2set),
         'jaccard': jaccard(f1set, f2set),
-        'sample_pearson': sample_pearson(f1set, f2set),
+        'sample_pearson': sample_pearson(f1set, f2set, nf),
         'kendalltau': rank_kendalltau(f1rank, f2rank),
         'spearmanr': rank_spearmanr(f1rank, f2rank),
         'euclidean': euclidean(mc1, mc2),

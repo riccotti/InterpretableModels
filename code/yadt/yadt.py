@@ -9,6 +9,9 @@ import networkx as nx
 
 from sklearn.base import BaseEstimator, ClassifierMixin
 
+import warnings
+warnings.filterwarnings("ignore")
+warnings.simplefilter("ignore")
 
 #import pydotplus
 
@@ -134,7 +137,7 @@ class YaDTClassifier(BaseEstimator, ClassifierMixin):
                 ts = np.column_stack((ts, wcol))
         to_yadt(df=ts, metadata=meta, decision=y, filenames=namesfile, filedata=datafile, sep=self.sep)
 
-        cmd = "./dTcmd -fm {} -fd {} -sep '{}' -tb {} -d {} {}".format(
+        cmd = "./yadt/dTcmd -fm {} -fd {} -sep '{}' -tb {} -d {} {}".format(
                 namesfile, datafile, self.sep, self.name+'.tree', self.name+'.dot', self.options)
         if verbose:
             print(cmd)
@@ -163,12 +166,15 @@ class YaDTClassifier(BaseEstimator, ClassifierMixin):
             datafile = self.name + ".test.gz"
             # remove weights column if present
             columns = [x[0] for x in self.metadata]
-            df = X[columns] if isinstance(X, pd.DataFrame) else X
-            df[targetname] = 0
+            if isinstance(X, pd.DataFrame):
+                df = X[columns]
+                df[targetname] = 0
+            else:
+                df = np.column_stack((X, [0] * len(X)))
             to_yadt_data(df, datafile, sep=self.sep)
 
         scorefile = self.name + ".score"
-        cmd = "./dTcmd -bt {} -ft {} -sep '{}' -s {}".format(
+        cmd = "./yadt/dTcmd -bt {} -ft {} -sep '{}' -s {}".format(
             self.name+'.tree', datafile, self.sep, scorefile)
         if verbose:
             print(cmd)

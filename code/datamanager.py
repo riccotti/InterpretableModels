@@ -8,6 +8,9 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 
+import warnings
+warnings.filterwarnings("ignore")
+
 
 def prepare_iris_sklearn(dataset_name, dataset_path):
     from sklearn import datasets
@@ -20,24 +23,27 @@ def prepare_iris_sklearn(dataset_name, dataset_path):
 def get_features(filename):
     data = open(filename, 'r')
     features = list()
+    feature_names = list()
     usecols = list()
     col_id = 0
     for row in data:
         field = row.strip().split(',')
-        features.append(field[0])
+        feature_names.append(field[0])
         if field[2] != 'ignore':
             usecols.append(col_id)
+            if field[2] != 'class':
+                features.append((field[0], field[1], field[2]))
         col_id += 1
-    return features, usecols
+    return feature_names, features, usecols
 
 
 def prepare_sklearn_dataset(dataset_name, dataset_path, target='class'):
     # df = pd.read_csv(dataset_path + dataset_name + '.csv.gz', delimiter=',')
 
-    features, col_indexes = get_features(dataset_path + dataset_name + '.names')
-    df = pd.read_csv(dataset_path + dataset_name + '.data.gz', delimiter=',', names=features, usecols=col_indexes)
+    feature_names, features, col_indexes = get_features(dataset_path + dataset_name + '.names')
+    df = pd.read_csv(dataset_path + dataset_name + '.data.gz', delimiter=',', names=feature_names, usecols=col_indexes)
 
-    features = yadt.metadata(df, ovr_types={})
+    # features = yadt.metadata(df, ovr_types={})
 
     features2binarize = list()
     class_observed = False
@@ -63,13 +69,6 @@ def prepare_sklearn_dataset(dataset_name, dataset_path, target='class'):
     else:
         e = None
         f = features
-
-    # print(e,'<<<<<<')
-    # if e is None:
-    #     print('ioooooo')
-    #
-    # else:
-    #     f = features
 
     return X, y, e, f
 
@@ -101,10 +100,8 @@ def sklearn_metadata(f, fi, fb, n, t):
 
 def prepare_yadt_dataset(dataset_name, dataset_path, target='class'):
 
-    features, col_indexes = get_features(dataset_path + dataset_name + '.names')
-    df = pd.read_csv(dataset_path + dataset_name + '.data.gz', delimiter=',', names=features, usecols=col_indexes)
-
-    features = yadt.metadata(df, ovr_types={})
+    feature_names, features, col_indexes = get_features(dataset_path + dataset_name + '.names')
+    df = pd.read_csv(dataset_path + dataset_name + '.data.gz', delimiter=',', names=feature_names, usecols=col_indexes)
 
     X = df.loc[:, df.columns != target].values
     y = df[target].values
