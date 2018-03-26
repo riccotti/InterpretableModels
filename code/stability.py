@@ -34,8 +34,11 @@ def encode_dataset(train_test, features):
         X_col_test = X_test[:, i][:]
         if (col_type == 'integer' and feat_type == 'discrete') or col_type == 'string':
             le = LabelEncoder()
-            X_col_train = le.fit_transform(X_col_train)
+            le.fit(np.concatenate((X_col_train, X_col_test)))
+            X_col_train = le.transform(X_col_train)
             X_col_test = le.transform(X_col_test)
+            # X_col_train = le.fit_transform(X_col_train)
+            # X_col_test = le.transform(X_col_test)
             label_encoders[i] = le
 
         X_train0 = X_col_train if X_train0 is None else np.column_stack((X_train0, X_col_train))
