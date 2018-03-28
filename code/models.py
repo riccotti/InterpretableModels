@@ -56,6 +56,8 @@ def intersection(fset1, fset2):
 
 
 def jaccard(fset1, fset2):
+    if len(fset1) == 0 and len(fset2) == 0:
+        return 0.0
     return len(fset1 & fset2) / len(fset1 | fset2)
 
 
