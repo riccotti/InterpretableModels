@@ -111,17 +111,6 @@ def prepare_yadt_dataset(dataset_name, dataset_path, target='class'):
     return X, y, None, features
 
 
-def prepare_rule_dataset(dataset_name, dataset_path, target='class'):
-
-    feature_names, features, col_indexes = get_features(dataset_path + dataset_name + '.names')
-    df = pd.read_csv(dataset_path + dataset_name + '.data.gz', delimiter=',', names=feature_names, usecols=col_indexes)
-
-    X = df.loc[:, df.columns != target].values
-    y = df[target].values
-
-    return X, y, None, features
-
-
 def prepare_rule_dataset(dataset_name, dataset_path, target='class', discretizer='entropy'):
 
     feature_names, features, col_indexes = get_features(dataset_path + dataset_name + '.names')
