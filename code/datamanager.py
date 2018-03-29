@@ -1,12 +1,14 @@
 __author__ = "Riccardo Guidotti"
 
-from yadt import yadt
-
 import numpy as np
 import pandas as pd
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
+
+from discretize import QuartileDiscretizer
+from discretize import DecileDiscretizer
+from discretize import EntropyDiscretizer
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -109,6 +111,63 @@ def prepare_yadt_dataset(dataset_name, dataset_path, target='class'):
     return X, y, None, features
 
 
+def prepare_rule_dataset(dataset_name, dataset_path, target='class'):
+
+    feature_names, features, col_indexes = get_features(dataset_path + dataset_name + '.names')
+    df = pd.read_csv(dataset_path + dataset_name + '.data.gz', delimiter=',', names=feature_names, usecols=col_indexes)
+
+    X = df.loc[:, df.columns != target].values
+    y = df[target].values
+
+    return X, y, None, features
+
+
+def prepare_rule_dataset(dataset_name, dataset_path, target='class', discretizer='entropy'):
+
+    feature_names, features, col_indexes = get_features(dataset_path + dataset_name + '.names')
+    df = pd.read_csv(dataset_path + dataset_name + '.data.gz', delimiter=',', names=feature_names, usecols=col_indexes)
+
+    X = df.loc[:, df.columns != target].values
+    y = df[target].values
+
+    # step 1: discretize continuous attributes
+    features2discretize = list()
+    for col, col_type, feat_type in features:
+        if feat_type == 'continuous':
+            features2discretize.append(col)
+
+    if len(features2discretize) > 0:
+        categorical_features = [i for i in range(0, len(features)) if features[i][0] not in features2discretize]
+        feature_names_disc = [col for col, col_type, feat_type in features]
+
+        if discretizer == 'quartile':
+            discretizer = QuartileDiscretizer(X, categorical_features, feature_names_disc, labels=y)
+        elif discretizer == 'decile':
+            discretizer = DecileDiscretizer(X, categorical_features, feature_names_disc, labels=y)
+        elif discretizer == 'entropy':
+            discretizer = EntropyDiscretizer(X, categorical_features, feature_names_disc, labels=y)
+        else:
+            raise ValueError("Discretizer must be 'quartile', 'decile' or 'entropy'")
+        # cont_features = [i for i in range(0, len(features)) if i not in categorical_features]
+        X = discretizer.discretize(X)
+
+    # step 2: label encode
+    Xy = np.column_stack((X, y))
+    df = pd.DataFrame(data=Xy, columns=[c[0] for c in features] + [target])
+    nbr_last_values = 0
+    for col in df.columns:
+        le = LabelEncoder()
+        df[col] = le.fit_transform(df[col]) + nbr_last_values
+        nbr_last_values += len(df[col].unique())
+
+    X = df.loc[:, df.columns != target].values
+    y = df[target].values
+
+    features = [(col, 'integer', 'discrete') for col, col_type, feat_type in features]
+
+    return X, y, None, features
+
+
 datasets = {
     'iris_sklearn': prepare_iris_sklearn,
     'credit_small_sklearn': prepare_sklearn_dataset,
@@ -132,6 +191,16 @@ datasets = {
     'gisette_yadt': prepare_yadt_dataset,
     'isolet_yadt': prepare_yadt_dataset,
     'madelon_yadt': prepare_yadt_dataset,
+
+    'credit_rule': prepare_rule_dataset,
+    'adult_rule': prepare_rule_dataset,
+    'cover_rule': prepare_rule_dataset,
+    'coil2000_rule': prepare_rule_dataset,
+    'clean1_rule': prepare_rule_dataset,
+    'clean2_rule': prepare_rule_dataset,
+    'gisette_rule': prepare_rule_dataset,
+    'isolet_rule': prepare_rule_dataset,
+    'madelon_rule': prepare_rule_dataset,
 }
 
 
