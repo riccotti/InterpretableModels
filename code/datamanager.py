@@ -157,40 +157,19 @@ def prepare_rule_dataset(dataset_name, dataset_path, target='class', discretizer
     return X, y, None, features
 
 
-datasets = {
-    'iris_sklearn': prepare_iris_sklearn,
-    'credit_small_sklearn': prepare_sklearn_dataset,
+dataset_names = ['credit', 'adult', 'cover', 'coil2000', 'clean1', 'clean2', 'gisette', 'isolet', 'madelon',
+                 'credit_small']
 
-    'credit_sklearn': prepare_sklearn_dataset,
-    'adult_sklearn': prepare_sklearn_dataset,
-    'cover_sklearn': prepare_sklearn_dataset,
-    'coil2000_sklearn': prepare_sklearn_dataset,
-    'clean1_sklearn': prepare_sklearn_dataset,
-    'clean2_sklearn': prepare_sklearn_dataset,
-    'gisette_sklearn': prepare_sklearn_dataset,
-    'isolet_sklearn': prepare_sklearn_dataset,
-    'madelon_sklearn': prepare_sklearn_dataset,
+datasets = dict()
 
-    'credit_yadt': prepare_yadt_dataset,
-    'adult_yadt': prepare_yadt_dataset,
-    'cover_yadt': prepare_yadt_dataset,
-    'coil2000_yadt': prepare_yadt_dataset,
-    'clean1_yadt': prepare_yadt_dataset,
-    'clean2_yadt': prepare_yadt_dataset,
-    'gisette_yadt': prepare_yadt_dataset,
-    'isolet_yadt': prepare_yadt_dataset,
-    'madelon_yadt': prepare_yadt_dataset,
+for dn in dataset_names:
+    datasets['%s_sklearn' % dn] = prepare_sklearn_dataset
 
-    'credit_rule': prepare_rule_dataset,
-    'adult_rule': prepare_rule_dataset,
-    'cover_rule': prepare_rule_dataset,
-    'coil2000_rule': prepare_rule_dataset,
-    'clean1_rule': prepare_rule_dataset,
-    'clean2_rule': prepare_rule_dataset,
-    'gisette_rule': prepare_rule_dataset,
-    'isolet_rule': prepare_rule_dataset,
-    'madelon_rule': prepare_rule_dataset,
-}
+for dn in dataset_names:
+    datasets['%s_yadt' % dn] = prepare_yadt_dataset
+
+for dn in dataset_names:
+    datasets['%s_rule' % dn] = prepare_rule_dataset
 
 
 def get_dataset(dataset_name, dataset_path):

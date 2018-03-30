@@ -23,6 +23,8 @@ fit_predict_model = {
     ('LM', 'linear_regression'): models.fit_predict_linear_regression,
     ('LM', 'lasso'): models.fit_predict_lasso,
     ('LM', 'ridge'): models.fit_predict_ridge,
+    ('RB', 'cpar'): models.fit_predict_cpar,
+    ('RB', 'foil'): models.fit_predict_cpar,
 }
 
 analyze_model = {
@@ -31,6 +33,8 @@ analyze_model = {
     ('LM', 'linear_regression'): models.analyze_sklearn_linear_models,
     ('LM', 'lasso'): models.analyze_sklearn_linear_models,
     ('LM', 'ridge'): models.analyze_sklearn_linear_models,
+    ('RB', 'cpar'): models.analyze_rule_based,
+    ('RB', 'foil'): models.analyze_rule_based,
 }
 
 compare_models = {
@@ -39,6 +43,8 @@ compare_models = {
     ('LM', 'linear_regression'): models.compare_sklearn_linear_models,
     ('LM', 'lasso'): models.compare_sklearn_linear_models,
     ('LM', 'ridge'): models.compare_sklearn_linear_models,
+    ('RB', 'cpar'): models.compare_rule_based,
+    ('RB', 'foil'): models.compare_rule_based,
 }
 
 aggregation_functions = {
@@ -131,7 +137,7 @@ def run_evaluate_stability(dataset_name, model_name, datasets_path='', models_pa
     if verbose:
         print('%s Storing results' % datetime.datetime.now())
 
-    logging.info(datetime.datetime.now(), 'Storing results')
+    logging.info('%s Storing results' % datetime.datetime.now())
     stability.store_model_stability(model_stability, model_stability_comparison, aggregation_functions,
                                     model_name, dataset_name, results_path)
 

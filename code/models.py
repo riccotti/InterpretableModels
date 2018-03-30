@@ -22,6 +22,11 @@ from scipy.spatial.distance import cosine
 from yadt import yadt
 from apted import apted, helpers
 
+from jrbc.rule_based_classifier import RuleBasedClassifier
+
+from scipy.stats import entropy
+from collections import defaultdict
+
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -508,11 +513,82 @@ def compare_sklearn_linear_models(m1, m2, e, f1, f2, args):
     return meval
 
 
-def fit_predict_yadt(train_test, seed):
-    clf = DecisionTreeClassifier(random_state=seed)
+def fit_predict_cpar(train_test, seed, features):
+    rbc = RuleBasedClassifier(alg='CPAR', options='-Xmx1G')
     X_train, X_test, y_train, y_test, fsindexes = train_test
-    clf.fit(X_train, y_train)
-    y_pred = clf.predict(X_test)
+    rbc.fit(X_train, y_train, verbose=False, deletefile=True)
+    y_pred = rbc.predict(X_test)
     acc = accuracy_score(y_test, y_pred)
     f1 = f1_score(y_test, y_pred, average='weighted')
-    return clf, acc, f1, fsindexes
+    return rbc, acc, f1, fsindexes
+
+
+def fit_predict_foil(train_test, seed, features):
+    rbc = RuleBasedClassifier(alg='FOIL', options='-Xmx1G')
+    X_train, X_test, y_train, y_test, fsindexes = train_test
+    rbc.fit(X_train, y_train, verbose=False, deletefile=True)
+    y_pred = rbc.predict(X_test)
+    acc = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred, average='weighted')
+    return rbc, acc, f1, fsindexes
+
+
+def get_feature_set_rules(rules):
+    fset = set()
+    rule_len = list()
+    prob = defaultdict(int)
+    for rule in rules:
+        cons, ant, laplace = rule
+        for col, val in ant.items():
+            fset.add(col)
+        rule_len.append(len(ant))
+        prob[cons] += 1
+
+    avg_rule_len = np.mean(rule_len)
+    rule_entropy = entropy([c/len(rules) for c in prob.values()])
+    return fset, avg_rule_len, rule_entropy
+
+
+def get_feature_rank_rules(rules, nf):
+    frank = [0.0] * nf
+    for rule in rules:
+        cons, ant, laplace = rule
+        for col, val in ant.items():
+            if frank[col] == 0.0:
+                frank[col] = laplace
+
+    return frank
+
+
+def analyze_rule_based(m, e, f):
+    fset, avg_rule_len, rule_entropy = get_feature_set_rules(m.rules)
+
+    meval = {
+        'nbr_features': len(fset),
+        'nbr_rules': len(m.rules),
+        'avg_rule_len': avg_rule_len,
+        'rule_entropy': rule_entropy
+    }
+
+    return meval
+
+
+def compare_rule_based(m1, m2, e, f1, f2, args):
+    f1set, _, _ = get_feature_set_rules(m1.rules)
+    f2set, _, _ = get_feature_set_rules(m2.rules)
+
+    nf = len([f for f in f1 if f])
+
+    f1rank = get_feature_rank_rules(m1.rules, nf)
+    f2rank = get_feature_rank_rules(m2.rules, nf)
+
+    meval = {
+        'intersection': intersection(f1set, f2set),
+        'jaccard': jaccard(f1set, f2set),
+        'sample_pearson': sample_pearson(f1set, f2set, nf),
+        'kendalltau': rank_kendalltau(f1rank, f2rank),
+        'spearmanr': rank_spearmanr(f1rank, f2rank),
+    }
+
+    return meval
+
