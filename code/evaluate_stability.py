@@ -24,7 +24,7 @@ fit_predict_model = {
     ('LM', 'lasso'): models.fit_predict_lasso,
     ('LM', 'ridge'): models.fit_predict_ridge,
     ('RB', 'cpar'): models.fit_predict_cpar,
-    ('RB', 'foil'): models.fit_predict_cpar,
+    ('RB', 'foil'): models.fit_predict_foil,
 }
 
 analyze_model = {
