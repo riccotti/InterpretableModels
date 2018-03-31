@@ -577,7 +577,9 @@ def compare_rule_based(m1, m2, e, f1, f2, args):
     f1set, _, _ = get_feature_set_rules(m1.rules)
     f2set, _, _ = get_feature_set_rules(m2.rules)
 
-    nf = len([f for f in f1 if f])
+    nf1 = len([f for f in f1 if f])
+    nf2 = len([f for f in f2 if f])
+    nf = max(nf1, nf2)
 
     f1rank = get_feature_rank_rules(m1.rules, nf)
     f2rank = get_feature_rank_rules(m2.rules, nf)

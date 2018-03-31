@@ -19,7 +19,7 @@ def clean():
 
 class RuleBasedClassifier:
 
-    def __init__(self, alg='CPAR', options='-Xmx1G'):
+    def __init__(self, alg='CPAR', options='-Xmx4G'):
         if alg != 'CPAR' and alg != 'FOIL':
             raise ValueError("Algorithm must be 'CPAR' or 'FOIL'")
 
