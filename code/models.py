@@ -524,7 +524,7 @@ def fit_predict_cpar(train_test, seed, features):
 
 
 def fit_predict_foil(train_test, seed, features):
-    rbc = RuleBasedClassifier(alg='FOIL', options='-Xmx1G')
+    rbc = RuleBasedClassifier(alg='FOIL', options='-Xmx4G')
     X_train, X_test, y_train, y_test, fsindexes = train_test
     rbc.fit(X_train, y_train, verbose=False, deletefile=True)
     y_pred = rbc.predict(X_test)
