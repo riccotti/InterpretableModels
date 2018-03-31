@@ -514,7 +514,7 @@ def compare_sklearn_linear_models(m1, m2, e, f1, f2, args):
 
 
 def fit_predict_cpar(train_test, seed, features):
-    rbc = RuleBasedClassifier(alg='CPAR', options='-Xmx1G')
+    rbc = RuleBasedClassifier(alg='CPAR', options='-Xmx4G')
     X_train, X_test, y_train, y_test, fsindexes = train_test
     rbc.fit(X_train, y_train, verbose=False, deletefile=True)
     y_pred = rbc.predict(X_test)
