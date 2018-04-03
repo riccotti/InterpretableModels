@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore")
 
 
 feature_selection = {
-    'VarianceThreshold': (VarianceThreshold,),
+    # 'VarianceThreshold': (VarianceThreshold,),
     'SelectKBest': (SelectKBest,),
     'SelectPercentile': (SelectPercentile,),
     'RFE_DecisionTreeClassifier': (RFE, DecisionTreeClassifier),
