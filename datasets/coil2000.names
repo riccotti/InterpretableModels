@@ -83,4 +83,4 @@ APLEZIER,integer,continuous
 AFIETS,integer,continuous
 AINBOED,integer,continuous
 ABYSTAND,integer,continuous
-CARAVAN,integer,class
+class,integer,class
