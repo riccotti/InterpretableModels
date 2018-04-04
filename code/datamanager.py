@@ -158,7 +158,7 @@ def prepare_rule_dataset(dataset_name, dataset_path, target='class', discretizer
 
 
 dataset_names = ['credit', 'adult', 'cover', 'coil2000', 'clean1', 'clean2', 'gisette', 'isolet', 'madelon',
-                 'credit_small']
+                 'credit_small', 'census', 'sonar', 'soybean', 'anneal']
 
 datasets = dict()
 
