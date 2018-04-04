@@ -56,8 +56,9 @@ def prepare_sklearn_dataset(dataset_name, dataset_path, target='class'):
                 le = LabelEncoder()
                 df[col] = le.fit_transform(df[col])
                 if len(le.classes_) > 2:
-                    # print(col, idx if not class_observed else idx - 1)
-                    features2binarize.append(idx if not class_observed else idx - 1)
+                    if col != target:
+                        # print(col, idx if not class_observed else idx - 1)
+                        features2binarize.append(idx if not class_observed else idx - 1)
         if col == target:
             class_observed = True
 
