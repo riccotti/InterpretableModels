@@ -93,11 +93,11 @@ def build_preprocessing_pipe():
         preprocessing_pipe.append((None, ('FS', fsm)))
     for ism in instance_selection:
         preprocessing_pipe.append((None, ('IS', ism)))
-    for fsm in feature_selection:
-        for ism in instance_selection:
-            preprocessing_pipe.append((('FS', fsm), ('IS', ism)))
-    for ism in instance_selection:
-        for fsm in feature_selection:
-            preprocessing_pipe.append((('IS', ism), ('FS', fsm)))
+    # for fsm in feature_selection:
+    #     for ism in instance_selection:
+    #         preprocessing_pipe.append((('FS', fsm), ('IS', ism)))
+    # for ism in instance_selection:
+    #     for fsm in feature_selection:
+    #         preprocessing_pipe.append((('IS', ism), ('FS', fsm)))
 
     return preprocessing_pipe
