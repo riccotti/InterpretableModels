@@ -164,6 +164,7 @@ def load_model(model_name, dataset_name, path):
     text_file.readline()
 
     trained_model = defaultdict(lambda: defaultdict(list))
+    fold_count = 0
     for line in text_file:
         fields = line.strip().split(';')
         pipe = eval(str(fields[2]))
@@ -172,8 +173,10 @@ def load_model(model_name, dataset_name, path):
         fold_id = int(fields[5])
         acc = float(fields[6])
         f1 = float(fields[7])
-        fs = [bool(x) for x in fields[8].split(' ')]
-        trained_model[pipe][(iter_id, k, fold_id)] = (models[fold_id], acc, f1, fs)
+        fs = [True if x == 'True' else False for x in fields[8].split(' ')]
+        trained_model[pipe][(iter_id, k, fold_id)] = (models[fold_id + fold_count * 50], acc, f1, fs)
+        if fold_id == 49:
+            fold_count += 1
 
     text_file.close()
     return trained_model
