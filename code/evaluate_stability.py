@@ -47,10 +47,17 @@ compare_models = {
     ('RB', 'foil'): models.compare_rule_based,
 }
 
+
 aggregation_functions = {
     'mean': np.mean,
     'std': np.std,
     'median': np.median,
+    'max': np.max,
+    'min': np.min,
+    '10p': lambda x: np.percentile(x, 10),
+    '25p': lambda x: np.percentile(x, 25),
+    '75p': lambda x: np.percentile(x, 75),
+    '90p': lambda x: np.percentile(x, 90),
 }
 
 
