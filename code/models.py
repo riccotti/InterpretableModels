@@ -502,7 +502,7 @@ def compare_sklearn_linear_models(m1, m2, e, f1, f2, args):
         'intersection': intersection(f1set, f2set),
         'jaccard': jaccard(f1set, f2set),
         'sample_pearson': sample_pearson(f1set, f2set, nf),
-        'kendalltau': rank_kendalltau(f1rank, f2rank),
+        'kendalltau': rank_kendalltau(np.abs(f1rank), np.abs(f2rank)),
         'spearmanr': rank_spearmanr(f1rank, f2rank),
         'euclidean': euclidean(mc1, mc2),
         'neuclidean': normalized_euclidean_distance(mc1, mc2),
