@@ -188,3 +188,108 @@ class YaDTClassifier(BaseEstimator, ClassifierMixin):
             os.remove(self.name+'.tree')
         return res[1].values
 
+    def get_node_labels(self):
+        return {k: v.replace('"', '').replace('\\n', '') for k, v in nx.get_node_attributes(self.dt, 'label').items()}
+
+    def get_edge_labels(self):
+        return {k: v.replace('"', '').replace('\\n', '') for k, v in nx.get_edge_attributes(self.dt, 'label').items()}
+
+    def ypredict(self, X=None, targetname='class', features=None, default_value=None):
+        class_name = targetname
+        features_type = dict()
+        discrete = list()
+        continuous = list()
+        features_order = dict()
+        for i, f in enumerate(features):
+            features_type[f[0]] = f[1]
+            features_order[f[0]] = i
+            if f[2] == 'continuous':
+                continuous.append(f[0])
+            elif f[2] == 'discrete':
+                discrete.append(f[0])
+        # features_type['class'] = 'string'
+        return self.predict_nx(X, class_name, features_type, discrete, continuous, features_order, default_value,
+                               leafnode=False)
+
+    def predict_nx(self, X, class_name, features_type, discrete, continuous, features_order, default_value,
+                   leafnode=True):
+        edge_labels = self.get_edge_labels()
+        node_labels = self.get_node_labels()
+        node_isleaf = {k: v == 'ellipse' for k, v in nx.get_node_attributes(self.dt, 'shape').items()}
+
+        # print(edge_labels)
+        # print(node_labels)
+        # print(node_isleaf)
+
+        y_list = list()
+        lf_list = list()
+        for x in X:
+            y, tp = self.predict_single_record(x, class_name, edge_labels, node_labels, node_isleaf,
+                                               features_type, discrete, continuous, features_order, default_value)
+            y_list.append(y)
+            if tp is None:
+                continue
+            lf_list.append(tp[-1])
+
+        if leafnode:
+            return np.array(y_list), lf_list
+
+        return np.array(y_list)
+
+    def predict_single_record(self, x, class_name, edge_labels, node_labels, node_isleaf, features_type, discrete,
+                              continuous, features_order, default_value, n_iter=1000):
+        root = 'n0'
+        node = root
+        tree_path = list()
+        count = 0
+        while not node_isleaf[node]:
+            att = node_labels[node]
+            val = x[features_order[att]]
+            for child in self.dt.neighbors(node):
+                count += 1
+                edge_val = edge_labels[(node, child)]
+                if att in discrete:
+                    val = val.strip() if isinstance(val, str) else val
+                    if yadt_value2type(edge_val, att, features_type) == val:
+                        tree_path.append(node)
+                        node = child
+                        break
+                else:
+                    pyval = yadt_value2type(val, att, features_type)
+                    if '>' in edge_val:
+                        thr = yadt_value2type(edge_val.replace('>', ''), att, features_type)
+                        if pyval > thr:
+                            tree_path.append(node)
+                            node = child
+                            break
+                    elif '<=' in edge_val:
+                        thr = yadt_value2type(edge_val.replace('<=', ''), att, features_type)
+                        if pyval <= thr:
+                            tree_path.append(node)
+                            node = child
+                            break
+            if count >= n_iter:
+                # print('Loop in Yadt prediction')
+                return default_value, None
+            count += 1
+            # break
+
+        tree_path.append(node)
+
+        outcome = int(node_labels[node].split('(')[0])
+        # print(outcome)
+        # return -1
+        # outcome = yadt_value2type(outcome, class_name, features_type)
+
+        return outcome, tree_path
+
+
+def yadt_value2type(x, attribute, features_type):
+
+    if features_type[attribute] == 'integer':
+        x = int(float(x))
+    elif features_type[attribute] == 'double':
+        x = float(x)
+
+    return x
+
