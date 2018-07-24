@@ -285,10 +285,9 @@ class YaDTClassifier(BaseEstimator, ClassifierMixin):
 
 
 def yadt_value2type(x, attribute, features_type):
-
     if features_type[attribute] == 'integer':
         x = int(float(x))
-    elif features_type[attribute] == 'double':
+    elif features_type[attribute] in ['double', 'float']:
         x = float(x)
 
     return x

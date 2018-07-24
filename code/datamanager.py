@@ -159,7 +159,8 @@ def prepare_rule_dataset(dataset_name, dataset_path, target='class', discretizer
 
 
 dataset_names = ['credit', 'adult', 'cover', 'coil2000', 'clean1', 'clean2', 'gisette', 'isolet', 'madelon',
-                 'credit_small', 'census', 'sonar', 'soybean', 'anneal']
+                 #'credit_small',
+                 'census', 'sonar', 'soybean', 'anneal']
 
 datasets = dict()
 
@@ -174,7 +175,6 @@ for dn in dataset_names:
 
 
 def get_dataset(dataset_name, dataset_path):
-
     return datasets[dataset_name](dataset_name.split('_')[0], dataset_path)
 
 
