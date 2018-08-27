@@ -8,7 +8,7 @@ dataset_size = {
     'census': 299285,
     'clean1': 476,
     'clean2': 6598,
-    'coil': 9822,
+    'coil2000': 9822,
     'cover': 581012,
     'credit': 1000,
     'sonar': 208,
@@ -32,7 +32,7 @@ def main():
 
     for m in m_list:
         args = ['python', 'evaluate_stability_tree.py',
-                '-d', 'credit_yadt',
+                '-d', dataset+'_yadt',
                 '-m', "('DT', 'yadt')",
                 '-dp', '../datasets/',
                 '-mp', '../models_tree/',
