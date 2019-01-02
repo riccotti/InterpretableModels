@@ -4,7 +4,7 @@ import subprocess
 
 dataset_size = {
     'adult': 48842,
-    'anneal':898,
+    'anneal': 898,
     'census': 299285,
     'clean1': 476,
     'clean2': 6598,

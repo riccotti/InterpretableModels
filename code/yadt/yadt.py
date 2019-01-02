@@ -135,8 +135,10 @@ class YaDTClassifier(BaseEstimator, ClassifierMixin):
                 ts = np.column_stack((ts, wcol))
         to_yadt(df=ts, metadata=meta, decision=y, filenames=namesfile, filedata=datafile, sep=self.sep)
 
-        cmd = 'yadt\\dTcmd.exe -fm {} -fd {} -sep "{}" -tb {} -d {} {}'.format(
-                namesfile, datafile, self.sep, self.name+'.tree', self.name+'.dot', self.options)
+        # cmd = 'yadt\\dTcmd.exe -fm {} -fd {} -sep "{}" -tb {} -d {} {}'.format(
+        #         namesfile, datafile, self.sep, self.name+'.tree', self.name+'.dot', self.options)
+        cmd = 'yadt/dTcmd -fm {} -fd {} -sep "{}" -tb {} -d {} {}'.format(
+            namesfile, datafile, self.sep, self.name + '.tree', self.name + '.dot', self.options)
         if verbose:
             print(cmd)
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)
@@ -172,8 +174,10 @@ class YaDTClassifier(BaseEstimator, ClassifierMixin):
             to_yadt_data(df, datafile, sep=self.sep)
 
         scorefile = self.name + ".score"
-        cmd = 'yadt\\dTcmd.exe -bt {} -ft {} -sep "{}" -s {}'.format(
-            self.name+'.tree', datafile, self.sep, scorefile)
+        # cmd = 'yadt\\dTcmd.exe -bt {} -ft {} -sep "{}" -s {}'.format(
+        #     self.name+'.tree', datafile, self.sep, scorefile)
+        cmd = 'yadt/dTcmd -bt {} -ft {} -sep "{}" -s {}'.format(
+            self.name + '.tree', datafile, self.sep, scorefile)
         if verbose:
             print(cmd)
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, shell=True)

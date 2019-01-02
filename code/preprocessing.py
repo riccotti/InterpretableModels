@@ -19,8 +19,8 @@ warnings.filterwarnings("ignore")
 
 feature_selection = {
     # 'VarianceThreshold': (VarianceThreshold,),
-    'SelectKBest': (SelectKBest,),
-    'SelectPercentile': (SelectPercentile,),
+    # 'SelectKBest': (SelectKBest,),
+    # 'SelectPercentile': (SelectPercentile,),
     'RFE_DecisionTreeClassifier': (RFE, DecisionTreeClassifier),
 
     # 'SelectFpr': (SelectFpr,),
@@ -99,5 +99,13 @@ def build_preprocessing_pipe():
     # for ism in instance_selection:
     #     for fsm in feature_selection:
     #         preprocessing_pipe.append((('IS', ism), ('FS', fsm)))
+
+    return preprocessing_pipe
+
+
+def build_preprocessing_pipe_yadt2():
+    preprocessing_pipe = [(None, None)]
+    for fsm in feature_selection:
+        preprocessing_pipe.append((None, ('FS', fsm)))
 
     return preprocessing_pipe
